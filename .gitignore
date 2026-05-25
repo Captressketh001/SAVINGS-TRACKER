@@ -1,0 +1,51 @@
+## Ignore Visual Studio temporary files, build output, and user-specific files
+
+# Build Folders
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# NuGet
+# Ignore packages folder and nupkg files
+packages/
+*.nupkg
+
+# Dotnet artifacts
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Publish output
+publish/
+
+# Resharper
+_ReSharper*/
+*.DotSettings.user
+
+# Generated files
+**/Generated/
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Node modules (if present)
+node_modules/
+
+# Database files
+*.db
