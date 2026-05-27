@@ -1,9 +1,13 @@
+using SavingsTracker.Api.Endpoints;
 using SavingsTracker.Api.Extensions;
+using SavingsTracker.Api.Interfaces;
+using SavingsTracker.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddPostgreDb();
 builder.AddJwtAuthentication();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddValidation();
 builder.Services.AddOpenApi();
 
@@ -19,7 +23,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-
+app.MapAuthEndpoints();
 app.MigrateDatabase();
 app.Run();
 

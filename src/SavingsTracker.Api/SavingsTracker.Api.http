@@ -1,1 +1,18 @@
 ###
+POST http://localhost:5075/api/auth/register
+Content-Type: application/json
+
+{
+    "username": "johndoe",
+    "email": "johndoe@gmail.com",
+    "password": "johndoe@1234"
+}
+
+###
+POST http://localhost:5075/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "johndoe@gmail.com",
+    "password": "johndoe@1234"
+}
