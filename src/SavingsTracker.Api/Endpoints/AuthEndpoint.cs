@@ -7,20 +7,32 @@ public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this WebApplication app)
     {
-       const string EndpointName = "Auth";
+        const string EndpointName = "Auth";
 
-       var group = app.MapGroup("/api/auth").WithTags(EndpointName);
+        var group = app.MapGroup("/api/auth").WithTags(EndpointName);
 
-       group.MapPost("/register", async (SignUp dto, IAuthService authService) =>
-       {
-           var result = await authService.Register(dto);
-           return Results.Ok(result);
-       });
+        group.MapPost("/register", async (SignUp dto, IAuthService authService) =>
+        {
+            var result = await authService.Register(dto);
+            return Results.Ok(result);
+        });
 
-         group.MapPost("/login", async (Login dto, IAuthService authService) =>
-         {
-              var result = await authService.Login(dto);
-              return Results.Ok(result);
-         });
+        group.MapPost("/login", async (Login dto, IAuthService authService, HttpContext http) =>
+        {
+            var result = await authService.Login(dto, http);
+            return Results.Ok(result);
+        });
+
+        group.MapPost("/refresh-token", async (HttpContext http, IAuthService authService) =>
+        {
+            var result = await authService.RefreshToken(http);
+            return Results.Ok(result);
+        });
+
+        group.MapPost("/logout", async (HttpContext http, IAuthService authService) =>
+        {
+            var result = await authService.Logout(http);
+            return Results.Ok(result);
+        });
     }
 }

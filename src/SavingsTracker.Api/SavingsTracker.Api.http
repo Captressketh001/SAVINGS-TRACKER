@@ -16,3 +16,10 @@ Content-Type: application/json
     "email": "johndoe@gmail.com",
     "password": "johndoe@1234"
 }
+
+###
+POST http://localhost:5075/api/auth/refresh-token
+
+
+###
+POST http://localhost:5075/api/auth/logout

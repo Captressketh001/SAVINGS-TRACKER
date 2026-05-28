@@ -2,6 +2,7 @@ using SavingsTracker.Api.Endpoints;
 using SavingsTracker.Api.Extensions;
 using SavingsTracker.Api.Interfaces;
 using SavingsTracker.Api.Services;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();
