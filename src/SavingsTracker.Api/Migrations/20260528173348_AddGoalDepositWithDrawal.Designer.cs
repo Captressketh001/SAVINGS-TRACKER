@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SavingsTracker.Api.Data;
@@ -11,9 +12,11 @@ using SavingsTracker.Api.Data;
 namespace SavingsTracker.Api.Migrations
 {
     [DbContext(typeof(SavingsStoreContext))]
-    partial class SavingsStoreContextModelSnapshot : ModelSnapshot
+    [Migration("20260528173348_AddGoalDepositWithDrawal")]
+    partial class AddGoalDepositWithDrawal
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

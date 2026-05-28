@@ -13,4 +13,6 @@ public class User
     public string? RefreshToken { get; set; }
 
     public DateTime? RefreshTokenExpiry { get; set; }
+
+    public ICollection<Goal> Goals { get; set; } = [];
 }

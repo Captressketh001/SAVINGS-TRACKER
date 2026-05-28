@@ -23,3 +23,13 @@ POST http://localhost:5075/api/auth/refresh-token
 
 ###
 POST http://localhost:5075/api/auth/logout
+
+###
+POST http://localhost:5075/api/goals/create
+Content-Type: application/json
+
+{
+    "name": "Buy a Car",
+    "targetAmount": 2000000,
+    "deadline": "2026-12-31"
+}
