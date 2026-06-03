@@ -9,12 +9,35 @@ public static class GoalEndpoint
     {
         const string EndpointName = "Goals";
 
-        var group = app.MapGroup("/api/goals").WithTags(EndpointName);
+        var group = app.MapGroup("/api/goals")
+                       .WithTags(EndpointName)
+                       .RequireAuthorization();
 
-        group.MapPost("/create", async (CreateGoalDto dto, IGoalService goalService) =>
+        group.MapGet("/", async (IGoalService goalService) =>
+        {
+            var result = await goalService.ListGoals();
+            return Results.Ok(result);
+        });
+        group.MapGet("/{id}", async (Guid id, IGoalService goalService) =>
+        {
+            var result = await goalService.ListGoalById(id);
+            return Results.Ok(result);
+        });
+        group.MapPost("/", async (CreateGoalDto dto, IGoalService goalService) =>
         {
             var result = await goalService.CreateGoal(dto);
             return Results.Ok(result);
-        }).RequireAuthorization();
+        });
+
+        group.MapPut("/{id}", async (Guid id, UpdateGoalDto dto, IGoalService goalService) =>
+        {
+            var result = await goalService.UpdateGoal(id, dto);
+            return Results.Ok(result);
+        });
+        group.MapDelete("/{id}", async (Guid id, IGoalService goalService) =>
+        {
+            var result = await goalService.DeleteGoal(id);
+            return Results.Ok(result);
+        });
     }
 }

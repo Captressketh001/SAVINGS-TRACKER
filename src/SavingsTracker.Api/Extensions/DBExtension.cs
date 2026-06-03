@@ -23,6 +23,7 @@ public static class DatabaseExtension
                          $"Password={Environment.GetEnvironmentVariable("DB_PASSWORD")}";
 
         builder.Services.AddDbContext<SavingsStoreContext>(options =>
-            options.UseNpgsql(connString));
+            options.UseNpgsql(connString, o => 
+                o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
     }
 }

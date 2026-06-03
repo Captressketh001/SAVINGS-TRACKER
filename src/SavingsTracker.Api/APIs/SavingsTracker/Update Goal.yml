@@ -1,0 +1,18 @@
+info:
+  name: Update Goal
+  type: http
+
+http:
+  method: PUT
+  url: http://localhost:5075/api/goals/cd16182a-50d0-4fa1-8801-46f9502030f8
+  body:
+    type: json
+    data: ""
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+​

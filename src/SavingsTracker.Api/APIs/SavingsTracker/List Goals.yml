@@ -1,0 +1,15 @@
+info:
+  name: List Goals
+  type: http
+
+http:
+  method: GET
+  url: http://localhost:5075/api/goal
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+​

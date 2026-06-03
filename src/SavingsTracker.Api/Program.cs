@@ -12,6 +12,8 @@ builder.AddPostgreDb();
 builder.AddJwtAuthentication();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IGoalService, GoalService>();
+builder.Services.AddScoped<IDepositService, DepositService>();
+builder.Services.AddScoped<IWithdrawService, WithdrawService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -43,7 +45,8 @@ app.MigrateDatabase();
 
 app.MapAuthEndpoints();
 app.MapGoalEndpoints();
-
+app.MapDepositEndpoints();
+app.MapWithdrawEndpoints();
 app.Run();
 
 
