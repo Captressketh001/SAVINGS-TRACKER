@@ -13,9 +13,9 @@ public static class GoalEndpoint
                        .WithTags(EndpointName)
                        .RequireAuthorization();
 
-        group.MapGet("/", async (IGoalService goalService) =>
+        group.MapGet("/", async ([AsParameters] GoalQueryDto query, IGoalService goalService) =>
         {
-            var result = await goalService.ListGoals();
+            var result = await goalService.ListGoals(query);
             return Results.Ok(result);
         });
         group.MapGet("/{id}", async (Guid id, IGoalService goalService) =>
@@ -37,6 +37,16 @@ public static class GoalEndpoint
         group.MapDelete("/{id}", async (Guid id, IGoalService goalService) =>
         {
             var result = await goalService.DeleteGoal(id);
+            return Results.Ok(result);
+        });
+        group.MapGet("/summary", async (IGoalService goalService) =>
+        {
+            var result = await goalService.GoalSummary();
+            return Results.Ok(result);
+        });
+        group.MapGet("/monthly-deposits", async (IGoalService goalService, string range = "3months") =>
+        {
+            var result = await goalService.GoalMonthlyDeposit(range);
             return Results.Ok(result);
         });
     }

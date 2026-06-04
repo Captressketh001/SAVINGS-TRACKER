@@ -1,0 +1,24 @@
+info:
+  name: ListGoalsFilter&Sort
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: http://localhost:5075/api/goals/monthly-deposits?range=all
+  params:
+    - name: range
+      value: all
+      type: query
+  body:
+    type: json
+    data: ""
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjAxOWU2OWVkLTFlODAtN2E1Ny04MmNjLWI4ZmNiNjU5NjBlMCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6ImpvaG5kb2VAZ21haWwuY29tIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6ImpvaG5kb2UiLCJleHAiOjE3ODA1ODY5NDksImlzcyI6InNhdmluZ3N0cmFja2VyIiwiYXVkIjoic2F2aW5nc3RyYWNrZXItdXNlcnMifQ.J93Zv-cVw0NHqVSFT0CMCY0kmk1H3OPr1t-OUcJNsyA
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
