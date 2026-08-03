@@ -1,21 +1,19 @@
 using System.Security.Claims;
-using SavingsTracker.Api.Data;
 using SavingsTracker.Api.Dtos;
 using SavingsTracker.Api.DTOs;
 using SavingsTracker.Api.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using SavingsTracker.Api.Models;
 
 namespace SavingsTracker.Api.Services;
 
 public class DepositService : IDepositService
 {
-    private readonly SavingsStoreContext _context;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public DepositService(SavingsStoreContext context, IHttpContextAccessor httpContextAccessor)
+    public DepositService(IUnitOfWork unitOfWork, IHttpContextAccessor httpContextAccessor)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -33,7 +31,7 @@ public class DepositService : IDepositService
     public async Task<ApiResponse<string>> AddDepositToGoal(Guid id, DepositDto dto)
     {
         var userId = GetLoggedInUserId();
-        var goal = await _context.Goals.FindAsync(id);
+        var goal = await _unitOfWork.Goals.GetByIdAsync(id);
 
         if (goal is null)
         {
@@ -57,8 +55,8 @@ public class DepositService : IDepositService
             Note = dto.Note,
             GoalId = goal.Id
         };
-        _context.Deposits.Add(deposit);
-        await _context.SaveChangesAsync();
+        await _unitOfWork.Deposits.AddAsync(deposit);
+        await _unitOfWork.SaveChangesAsync();
 
         return new ApiResponse<string>
         (
@@ -72,18 +70,16 @@ public class DepositService : IDepositService
     {
         var userId = GetLoggedInUserId();
 
-        var goal = await _context.Goals
-            .FirstOrDefaultAsync(g => g.Id == id && g.CreatedBy == userId);
+        var goal = await _unitOfWork.Goals
+            .ExistsForUserAsync(id, userId);
 
-        if (goal is null)
+        if (!goal)
             return new ApiResponse<IEnumerable<DepositDetailDto>>(
                 ResponseMsg: "Goal not found",
                 ResponseDetails: Enumerable.Empty<DepositDetailDto>(),
                 ResponseCode: 404
             );
-        var deposits = await _context.Deposits
-            .Where(d => d.GoalId == id)
-            .ToListAsync();
+       var deposits = await _unitOfWork.Deposits.FindAsync(d => d.GoalId == id);
 
         if (!deposits.Any())
         {

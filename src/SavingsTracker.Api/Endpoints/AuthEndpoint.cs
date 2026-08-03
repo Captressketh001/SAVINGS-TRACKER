@@ -34,5 +34,10 @@ public static class AuthEndpoints
             var result = await authService.Logout(http);
             return Results.Ok(result);
         });
+        app.MapGet("/user/profile", async (HttpContext http, IAuthService authService) =>
+        {
+            var result = await authService.UserDetails(http);
+            return Results.Ok(result);
+        }).RequireAuthorization();
     }
 }

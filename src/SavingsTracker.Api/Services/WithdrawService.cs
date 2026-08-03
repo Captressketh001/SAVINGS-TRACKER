@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
-using SavingsTracker.Api.Data;
 using SavingsTracker.Api.Dtos;
 using SavingsTracker.Api.DTOs;
 using SavingsTracker.Api.Interfaces;
@@ -10,12 +9,12 @@ namespace SavingsTracker.Api.Services;
 
 public class WithdrawService: IWithdrawService
 {
-    private readonly SavingsStoreContext _context;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public WithdrawService(SavingsStoreContext context, IHttpContextAccessor httpContextAccessor)
+    public WithdrawService(IUnitOfWork unitOfWork, IHttpContextAccessor httpContextAccessor)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -33,10 +32,7 @@ public class WithdrawService: IWithdrawService
     public async Task<ApiResponse<string>> WithdrawFromGoal(Guid id, WithdrawDto dto)
     {
         var userId = GetLoggedInUserId();
-        var goal = await _context.Goals
-            .Include(g => g.Deposits)
-            .Include(g => g.Withdrawals)
-            .FirstOrDefaultAsync(g => g.Id == id);
+        var goal = await _unitOfWork.Goals.GetGoalWithDetailsAsync(id);
 
         if (goal is null)
         {
@@ -72,8 +68,8 @@ public class WithdrawService: IWithdrawService
             Note = dto.Note,
             GoalId = goal.Id
         };
-        _context.Withdrawals.Add(withdrawal);
-        await _context.SaveChangesAsync();
+        await _unitOfWork.Withdrawals.AddAsync(withdrawal);
+        await _unitOfWork.SaveChangesAsync();
 
         return new ApiResponse<string>
         (
@@ -87,20 +83,17 @@ public class WithdrawService: IWithdrawService
     {
         var userId = GetLoggedInUserId();
 
-        var goal = await _context.Goals
-            .FirstOrDefaultAsync(g => g.Id == id && g.CreatedBy == userId);
+        var goal = await _unitOfWork.Goals.ExistsForUserAsync(id, userId);
 
-        if (goal is null)
+        if (!goal)
             return new ApiResponse<IEnumerable<DepositDetailDto>>(
                 ResponseMsg: "Goal not found",
                 ResponseDetails: Enumerable.Empty<DepositDetailDto>(),
                 ResponseCode: 404
             );
-        var withdrawals = await _context.Withdrawals
-            .Where(d => d.GoalId == id)
-            .ToListAsync();
+        var withdrawals = await _unitOfWork.Withdrawals.FindAsync(d => d.GoalId == id);
 
-        if (withdrawals.Count == 0)
+        if (!withdrawals.Any())
         {
             return new ApiResponse<IEnumerable<DepositDetailDto>>(
                 ResponseMsg: "No withdrawal found for this goal",

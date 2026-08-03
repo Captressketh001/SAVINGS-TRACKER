@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
-using SavingsTracker.Api.Data;
 using SavingsTracker.Api.Dtos;
 using SavingsTracker.Api.DTOs;
 using SavingsTracker.Api.Interfaces;
@@ -11,12 +10,14 @@ namespace SavingsTracker.Api.Services;
 
 public class GoalService : IGoalService
 {
-    private readonly SavingsStoreContext _context;
+    private readonly IUnitOfWork _unitOfWork;
+
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public GoalService(SavingsStoreContext context, IHttpContextAccessor httpContextAccessor)
+
+    public GoalService(IUnitOfWork unitOfWork, IHttpContextAccessor httpContextAccessor)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -35,13 +36,7 @@ public class GoalService : IGoalService
     {
         var userId = GetLoggedInUserId();
 
-        var goals = await _context.Goals
-            .Where(g => g.CreatedBy == userId)
-            .Include(g => g.User)
-            .Include(g => g.Deposits)
-            .Include(g => g.Withdrawals)
-            .ToListAsync();
-
+        var goals = await _unitOfWork.Goals.GetGoalsWithDetailsAsync(userId);
 
         if (!goals.Any())
             return new ApiResponse<IEnumerable<GoalsDetailDto>>(
@@ -70,7 +65,7 @@ public class GoalService : IGoalService
         });
 
         if (!string.IsNullOrEmpty(query.Status))
-            goalDtos = goalDtos.Where(g => 
+            goalDtos = goalDtos.Where(g =>
                 g.Status.Equals(query.Status?.ToLower(), StringComparison.OrdinalIgnoreCase));
 
         var sorted = query.SortBy switch
@@ -79,9 +74,9 @@ public class GoalService : IGoalService
                          ? goalDtos.OrderByDescending(g => g.Name)
                          : goalDtos.OrderBy(g => g.Name),
             "deadline" => query.SortOrder == "desc"
-                          ? goalDtos.OrderByDescending(g => g.Deadline.HasValue ? 0: 1)
+                          ? goalDtos.OrderByDescending(g => g.Deadline.HasValue ? 0 : 1)
                                  .ThenByDescending(g => g.Deadline)
-                          : goalDtos.OrderBy(g => g.Deadline.HasValue ? 0: 1)  
+                          : goalDtos.OrderBy(g => g.Deadline.HasValue ? 0 : 1)
                                   .ThenBy(g => g.Deadline),
             "progress" => query.SortOrder == "desc"
                         ? goalDtos.OrderByDescending(g => g.CurrentAmount / g.TargetAmount)
@@ -89,8 +84,8 @@ public class GoalService : IGoalService
             "amountsaved" => query.SortOrder == "desc"
                             ? goalDtos.OrderByDescending(g => g.CurrentAmount)
                             : goalDtos.OrderBy(g => g.CurrentAmount),
-            _      => goalDtos
-            
+            _ => goalDtos
+
         };
         return new ApiResponse<IEnumerable<GoalsDetailDto>>(
             ResponseMsg: "Goals retrieved successfully",
@@ -112,8 +107,8 @@ public class GoalService : IGoalService
             CreatedBy = userId
         };
 
-        _context.Goals.Add(goal);
-        await _context.SaveChangesAsync();
+        await _unitOfWork.Goals.AddAsync(goal);
+        await _unitOfWork.SaveChangesAsync();
 
         return new ApiResponse<string>
         (
@@ -126,7 +121,7 @@ public class GoalService : IGoalService
     public async Task<ApiResponse<string>> UpdateGoal(Guid id, UpdateGoalDto dto)
     {
         var userId = GetLoggedInUserId();
-        var goal = await _context.Goals.FindAsync(id);
+        var goal = await _unitOfWork.Goals.GetByIdAsync(id);
 
         if (goal is null)
         {
@@ -150,7 +145,7 @@ public class GoalService : IGoalService
         goal.TargetAmount = dto.TargetAmount ?? goal.TargetAmount;
         goal.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();
 
         return new ApiResponse<string>(
             ResponseMsg: "Goal Updated Successfully!",
@@ -162,7 +157,7 @@ public class GoalService : IGoalService
     public async Task<ApiResponse<string>> DeleteGoal(Guid id)
     {
         var userId = GetLoggedInUserId();
-        var goal = await _context.Goals.FindAsync(id);
+        var goal = await _unitOfWork.Goals.GetByIdAsync(id);
 
         if (goal is null)
         {
@@ -183,8 +178,8 @@ public class GoalService : IGoalService
         }
 
 
-        _context.Goals.Remove(goal);
-        await _context.SaveChangesAsync();
+        _unitOfWork.Goals.Remove(goal);
+        await _unitOfWork.SaveChangesAsync();
         return new ApiResponse<string>(
             ResponseMsg: "Goal Deleted Successfully!",
             ResponseDetails: null,
@@ -195,11 +190,7 @@ public class GoalService : IGoalService
     public async Task<ApiResponse<GoalsDetailDto>> ListGoalById(Guid id)
     {
         var userId = GetLoggedInUserId();
-        var goal = await _context.Goals
-            .Include(g => g.User)
-            .Include(g => g.Deposits)
-            .Include(g => g.Withdrawals)
-            .FirstOrDefaultAsync(g => g.Id == id);
+        var goal = await _unitOfWork.Goals.GetGoalWithDetailsAsync(id);
 
         if (goal is null)
         {
@@ -242,13 +233,9 @@ public class GoalService : IGoalService
     {
         var userId = GetLoggedInUserId();
 
-        var goals = await _context.Goals
-            .Where(g => g.CreatedBy == userId)
-            .Include(g => g.Deposits)
-            .Include(g => g.Withdrawals)
-            .ToListAsync();
+        var goals = await _unitOfWork.Goals.GetGoalsWithDetailsAsync(userId);
 
-        if (goals.Count == 0)
+        if (!goals.Any())
             return new ApiResponse<GoalSummaryDto>(
                 ResponseMsg: "Goals Summary Retrieved successfully",
                 ResponseDetails: new GoalSummaryDto(
@@ -265,7 +252,7 @@ public class GoalService : IGoalService
         var totalSavings = goals.Sum(GetCurrentAmount);
         var activeGoals = goals.Count(g => GetCurrentAmount(g) < g.TargetAmount);
         var completedGoals = goals.Count(g => GetCurrentAmount(g) >= g.TargetAmount);
-        
+
         return new ApiResponse<GoalSummaryDto>(
             ResponseMsg: "Goals Summary Retrieved successfully",
             ResponseDetails: new GoalSummaryDto(
@@ -275,26 +262,28 @@ public class GoalService : IGoalService
         );
 
     }
-    public async Task<ApiResponse<IEnumerable<MonthlyDepositDto>>> GoalMonthlyDeposit(string range="3months")
+    public async Task<ApiResponse<IEnumerable<MonthlyDepositDto>>> GoalMonthlyDeposit(string range = "3months")
     {
         var userId = GetLoggedInUserId();
-        
+
         DateTime? startDate = range switch
         {
-            "1month"  => DateTime.UtcNow.AddMonths(-1),
+            "1month" => DateTime.UtcNow.AddMonths(-1),
             "3months" => DateTime.UtcNow.AddMonths(-3),
             "6months" => DateTime.UtcNow.AddMonths(-6),
-            "year"    => new DateTime(DateTime.UtcNow.Year, 1, 1),
-            "all"     => null, 
-            _         => DateTime.UtcNow.AddMonths(-3)
+            "year" => new DateTime(DateTime.UtcNow.Year, 1, 1),
+            "all" => null,
+            _ => DateTime.UtcNow.AddMonths(-3)
         };
 
-        var deposits = await _context.Deposits
-            .Where(d => d.Goal.CreatedBy == userId && 
-                (startDate == null || d.Date >= startDate))
+        var allDeposits = await _unitOfWork.Deposits
+     .FindAsync(d => d.Goal.CreatedBy == userId &&
+         (startDate == null || d.Date >= startDate));
+
+        var deposits = allDeposits
             .Select(d => new { d.Date, d.Amount })
-            .ToListAsync();
-        
+            .ToList();
+
         if (deposits.Count == 0)
         {
             return new ApiResponse<IEnumerable<MonthlyDepositDto>>(

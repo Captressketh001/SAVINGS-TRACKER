@@ -2,7 +2,9 @@ using SavingsTracker.Api.Endpoints;
 using SavingsTracker.Api.Extensions;
 using SavingsTracker.Api.Interfaces;
 using SavingsTracker.Api.Middleware;
+using SavingsTracker.Api.Repositories;
 using SavingsTracker.Api.Services;
+
 using Scalar.AspNetCore;
 // using Microsoft.OpenApi.Models;
 
@@ -14,6 +16,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IGoalService, GoalService>();
 builder.Services.AddScoped<IDepositService, DepositService>();
 builder.Services.AddScoped<IWithdrawService, WithdrawService>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

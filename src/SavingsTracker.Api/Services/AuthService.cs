@@ -1,9 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using SavingsTracker.Api.Data;
 using SavingsTracker.Api.Dtos;
 using SavingsTracker.Api.DTOs;
 using SavingsTracker.Api.Interfaces;
@@ -13,20 +11,19 @@ namespace SavingsTracker.Api.Services;
 
 public class AuthService : IAuthService
 {
-    private readonly SavingsStoreContext _context;
 
-
-    public AuthService(SavingsStoreContext context)
+    private readonly IUnitOfWork _unitOfWork;
+    public AuthService(IUnitOfWork unitOfWork)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<ApiResponse<string>> Register(SignUp dto)
     {
-        var existingUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == dto.Email);
+        var existingUser = await _unitOfWork.Users
+            .FindAsync(u => u.Email == dto.Email);
 
-        if(existingUser != null)
+        if (existingUser.Any())
             return new ApiResponse<string>(
                 ResponseMsg: "Email already in use",
                 ResponseDetails: null,
@@ -40,8 +37,8 @@ public class AuthService : IAuthService
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password)
         };
 
-        _context.Users.Add(user);
-        await  _context.SaveChangesAsync();
+        await _unitOfWork.Users.AddAsync(user);
+        await _unitOfWork.SaveChangesAsync();
         return new ApiResponse<string>(
             ResponseMsg: "User registered successfully",
             ResponseDetails: null,
@@ -49,13 +46,14 @@ public class AuthService : IAuthService
         );
     }
 
-    public async Task<ApiResponse<AuthResponse>> Login(Login dto, HttpContext http)
+    public async Task<ApiResponse<string?>> Login(Login dto, HttpContext http)
     {
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == dto.Email);
-        
+        var users = await _unitOfWork.Users
+            .FindAsync(u => u.Email == dto.Email);
+
+        var user = users.FirstOrDefault();
         if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
-            return new ApiResponse<AuthResponse>(
+            return new ApiResponse<string?>(
                 ResponseMsg: "Invalid email or password",
                 ResponseDetails: null,
                 ResponseCode: 401
@@ -67,8 +65,16 @@ public class AuthService : IAuthService
         user.RefreshToken = newRefreshToken;
         user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(30);
         user.LastLoginAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();
 
+        http.Response.Cookies.Append("accessToken", newAccessToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTime.UtcNow.AddMinutes(
+            double.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES")!))
+        });
         http.Response.Cookies.Append("refreshToken", newRefreshToken, new CookieOptions
         {
             HttpOnly = true,
@@ -76,27 +82,28 @@ public class AuthService : IAuthService
             SameSite = SameSiteMode.Strict,
             Expires = DateTime.UtcNow.AddDays(30)
         });
-        return new ApiResponse<AuthResponse>(
+        return new ApiResponse<string?>(
             ResponseMsg: "Login successful",
-            ResponseDetails: new AuthResponse(newAccessToken),
+            ResponseDetails: null,
             ResponseCode: 200
         );
     }
 
-    public async Task<ApiResponse<AuthResponse>> RefreshToken(HttpContext http)
+    public async Task<ApiResponse<string?>> RefreshToken(HttpContext http)
     {
         if (!http.Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
-            return new ApiResponse<AuthResponse>(
+            return new ApiResponse<string?>(
                 ResponseMsg: "Refresh token not found",
                 ResponseDetails: null,
                 ResponseCode: 401
             );
 
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.RefreshToken == refreshToken && u.RefreshTokenExpiry > DateTime.UtcNow);
+        var users = await _unitOfWork.Users
+            .FindAsync(u => u.RefreshToken == refreshToken && u.RefreshTokenExpiry > DateTime.UtcNow);
 
+        var user = users.FirstOrDefault();
         if (user == null)
-            return new ApiResponse<AuthResponse>(
+            return new ApiResponse<string?>(
                 ResponseMsg: "Invalid or expired refresh token",
                 ResponseDetails: null,
                 ResponseCode: 401
@@ -107,8 +114,17 @@ public class AuthService : IAuthService
 
         user.RefreshToken = newRefreshToken;
         user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(30);
-        await _context.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();
 
+
+        http.Response.Cookies.Append("accessToken", newAccessToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTime.UtcNow.AddMinutes(
+                    double.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES")!))
+        });
         http.Response.Cookies.Append("refreshToken", newRefreshToken, new CookieOptions
         {
             HttpOnly = true,
@@ -117,9 +133,9 @@ public class AuthService : IAuthService
             Expires = DateTime.UtcNow.AddDays(30)
         });
 
-        return new ApiResponse<AuthResponse>(
+        return new ApiResponse<string?>(
             ResponseMsg: "Token refreshed successfully",
-            ResponseDetails: new AuthResponse(newAccessToken),
+            ResponseDetails: null,
             ResponseCode: 200
         );
     }
@@ -133,9 +149,10 @@ public class AuthService : IAuthService
                 ResponseCode: 401
             );
 
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
+        var users = await _unitOfWork.Users
+            .FindAsync(u => u.RefreshToken == refreshToken);
 
+        var user = users.FirstOrDefault();
         if (user == null)
             return new ApiResponse<string>(
                 ResponseMsg: "Invalid token",
@@ -145,10 +162,10 @@ public class AuthService : IAuthService
 
         user.RefreshToken = null;
         user.RefreshTokenExpiry = null;
-        await _context.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();
 
         http.Response.Cookies.Delete("refreshToken");
-
+        http.Response.Cookies.Delete("accessToken");
         return new ApiResponse<string>(
             ResponseMsg: "Logout successful",
             ResponseDetails: null,
@@ -156,6 +173,39 @@ public class AuthService : IAuthService
         );
     }
 
+    public async Task<ApiResponse<UserDetailDto>> UserDetails(HttpContext http)
+{
+    var userIdClaim = http.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    if (string.IsNullOrEmpty(userIdClaim))
+        return new ApiResponse<UserDetailDto>(
+            ResponseMsg: "User not authenticated",
+            ResponseDetails: null,
+            ResponseCode: 401
+        );
+
+    var userId = Guid.Parse(userIdClaim);
+    var users = await _unitOfWork.Users.FindAsync(u => u.Id == userId);
+    var user = users.FirstOrDefault();
+
+    if (user is null)
+        return new ApiResponse<UserDetailDto>(
+            ResponseMsg: "User not found",
+            ResponseDetails: null,
+            ResponseCode: 404
+        );
+
+    return new ApiResponse<UserDetailDto>(
+        ResponseMsg: "User retrieved successfully",
+        ResponseDetails: new UserDetailDto(
+            user.Id,
+            user.Username,
+            user.Email,
+            user.CreatedAt
+        ),
+        ResponseCode: 200
+    );
+}
     private string GenerateAccessToken(User user)
     {
         var key = new SymmetricSecurityKey(
