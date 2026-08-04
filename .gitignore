@@ -1,5 +1,9 @@
 ## Ignore Visual Studio temporary files, build output, and user-specific files
 
+**/appsettings.Development.json
+
+# Docker
+docker-compose.override.yml
 # Build Folders
 bin/
 obj/
