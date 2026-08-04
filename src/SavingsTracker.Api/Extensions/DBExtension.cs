@@ -33,17 +33,29 @@ public static class DatabaseExtension
 
             var userInfo = uri.UserInfo.Split(':', 2);
 
+            if (userInfo.Length != 2)
+            {
+                throw new InvalidOperationException(
+                    "Invalid PostgreSQL connection URL.");
+            }
+
             var username = Uri.UnescapeDataString(userInfo[0]);
             var password = Uri.UnescapeDataString(userInfo[1]);
-
             var database = uri.AbsolutePath.TrimStart('/');
+
+            var port = uri.IsDefaultPort ? 5432 : uri.Port;
 
             connString =
                 $"Host={uri.Host};" +
-                $"Port={uri.Port};" +
+                $"Port={port};" +
                 $"Database={database};" +
                 $"Username={username};" +
-                $"Password={password}";
+                $"Password={password};";
+
+            if (!connString.Contains("Ssl Mode=", StringComparison.OrdinalIgnoreCase))
+            {
+                connString += "Ssl Mode=Require;";
+            }
         }
 
         builder.Services.AddDbContext<SavingsStoreContext>(options =>
