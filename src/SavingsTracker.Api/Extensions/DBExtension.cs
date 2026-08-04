@@ -26,6 +26,26 @@ public static class DatabaseExtension
                 "Database connection string 'DefaultConnection' was not found.");
         }
 
+        if (connString.StartsWith("postgres://") ||
+            connString.StartsWith("postgresql://"))
+        {
+            var uri = new Uri(connString);
+
+            var userInfo = uri.UserInfo.Split(':', 2);
+
+            var username = Uri.UnescapeDataString(userInfo[0]);
+            var password = Uri.UnescapeDataString(userInfo[1]);
+
+            var database = uri.AbsolutePath.TrimStart('/');
+
+            connString =
+                $"Host={uri.Host};" +
+                $"Port={uri.Port};" +
+                $"Database={database};" +
+                $"Username={username};" +
+                $"Password={password}";
+        }
+
         builder.Services.AddDbContext<SavingsStoreContext>(options =>
             options.UseNpgsql(
                 connString,
