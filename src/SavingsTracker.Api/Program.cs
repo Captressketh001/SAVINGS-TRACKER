@@ -33,6 +33,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseHttpsRedirection();
     app.MapScalarApiReference(options =>
     {
         options.AddPreferredSecuritySchemes("Bearer")
@@ -44,12 +45,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
-app.UseHttpsRedirection();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MigrateDatabase();
-
 app.MapAuthEndpoints();
 app.MapGoalEndpoints();
 app.MapDepositEndpoints();

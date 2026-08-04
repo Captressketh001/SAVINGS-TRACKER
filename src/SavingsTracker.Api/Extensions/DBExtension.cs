@@ -8,22 +8,28 @@ public static class DatabaseExtension
     public static void MigrateDatabase(this WebApplication app)
     {
         using var scope = app.Services.CreateScope();
+
         var services = scope.ServiceProvider;
+
         var context = services.GetRequiredService<SavingsStoreContext>();
+
         context.Database.Migrate();
     }
 
     public static void AddPostgreDb(this WebApplicationBuilder builder)
     {
-        DotNetEnv.Env.Load();
+        var connString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-        var connString = $"Host={Environment.GetEnvironmentVariable("DB_HOST")};" +
-                         $"Database={Environment.GetEnvironmentVariable("DB_NAME")};" +
-                         $"Username={Environment.GetEnvironmentVariable("DB_USER")};" +
-                         $"Password={Environment.GetEnvironmentVariable("DB_PASSWORD")}";
+        if (string.IsNullOrWhiteSpace(connString))
+        {
+            throw new InvalidOperationException(
+                "Database connection string 'DefaultConnection' was not found.");
+        }
 
         builder.Services.AddDbContext<SavingsStoreContext>(options =>
-            options.UseNpgsql(connString, o => 
-                o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
+            options.UseNpgsql(
+                connString,
+                o => o.UseQuerySplittingBehavior(
+                    QuerySplittingBehavior.SplitQuery)));
     }
 }
